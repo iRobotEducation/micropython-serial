@@ -11,6 +11,7 @@ import termios
 import ustruct
 import fcntl
 import uselect
+from micropython import const
 
 FIONREAD = const(0x541b)
 
