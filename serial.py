@@ -1,7 +1,6 @@
 #
-# pycopy-serial - pySerial-like interface for Pycopy
-# https://github.com/pfalcon/pycopy-serial
-# https://github.com/pfalcon/pycopy
+# serial - pySerial-like interface for Micropython
+# based on https://github.com/pfalcon/pycopy-serial
 #
 # Copyright (c) 2014 Paul Sokolovsky
 # Licensed under MIT license
@@ -14,14 +13,7 @@ import uselect
 from micropython import const
 
 FIONREAD = const(0x541b)
-
-
-class SerialException(OSError):
-    pass
-
-
-class SerialDisconnectException(SerialException):
-    pass
+F_GETFD = const(1)
 
 
 class Serial:
@@ -45,7 +37,6 @@ class Serial:
         termios.setraw(self.fd)
         iflag, oflag, cflag, lflag, ispeed, ospeed, cc = termios.tcgetattr(
             self.fd)
-        #print("tcgetattr result:", iflag, oflag, cflag, lflag, ispeed, ospeed, cc)
         baudrate = self.BAUD_MAP[self.baudrate]
         termios.tcsetattr(self.fd, termios.TCSANOW,
                           [iflag, oflag, cflag, lflag, baudrate, baudrate, cc])
@@ -53,31 +44,36 @@ class Serial:
         self.poller.register(self.fd, uselect.POLLIN | uselect.POLLHUP)
 
     def close(self):
-        os.close(self.fd)
+        if self.fd:
+            os.close(self.fd)
+        self.fd = None
 
-    def inWaiting(self):
+    @property
+    def in_waiting(self):
+        """Can throw an OSError or TypeError"""
         buf = ustruct.pack('I', 0)
         fcntl.ioctl(self.fd, FIONREAD, buf, True)
         return ustruct.unpack('I', buf)[0]
 
+    @property
+    def is_open(self):
+        """Can throw an OSError or TypeError"""
+        return fcntl.fcntl(self.fd, F_GETFD) == 0
+
     def write(self, data):
-        return os.write(self.fd, data)
+        if self.fd:
+            os.write(self.fd, data)
 
     def read(self, size=1):
-        buf = b""
-        c = 0
-        while size > 0:
+        buf = b''
+        while self.fd and size > 0:
             if not self.poller.poll(self.timeout):
                 break
             chunk = os.read(self.fd, size)
             l = len(chunk)
-            if l == 0:
-                # If we read 0 butes, it means that port is gone
-                # (for example, underlying hardware like USB adapter
-                # disconnected)
-                raise SerialDisconnectException("Port disconnected")
+            if l == 0:  # port has disappeared
+                self.close()
+                return buf
             size -= l
             buf += bytes(chunk)
-            c += 1
-
         return buf
