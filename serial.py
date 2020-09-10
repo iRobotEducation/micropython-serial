@@ -15,6 +15,7 @@ from micropython import const
 
 FIONREAD = const(0x541b)
 
+
 class SerialException(OSError):
     pass
 
@@ -42,10 +43,12 @@ class Serial:
     def open(self):
         self.fd = os.open(self.port, os.O_RDWR | os.O_NOCTTY)
         termios.setraw(self.fd)
-        iflag, oflag, cflag, lflag, ispeed, ospeed, cc = termios.tcgetattr(self.fd)
+        iflag, oflag, cflag, lflag, ispeed, ospeed, cc = termios.tcgetattr(
+            self.fd)
         #print("tcgetattr result:", iflag, oflag, cflag, lflag, ispeed, ospeed, cc)
         baudrate = self.BAUD_MAP[self.baudrate]
-        termios.tcsetattr(self.fd, termios.TCSANOW, [iflag, oflag, cflag, lflag, baudrate, baudrate, cc])
+        termios.tcsetattr(self.fd, termios.TCSANOW,
+                          [iflag, oflag, cflag, lflag, baudrate, baudrate, cc])
         self.poller = uselect.poll()
         self.poller.register(self.fd, uselect.POLLIN | uselect.POLLHUP)
 

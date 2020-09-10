@@ -6,6 +6,7 @@ except ImportError:
 
 _cache = {}
 
+
 def open(name, maxver=10, extra=()):
     if not ffi:
         return None
@@ -13,6 +14,7 @@ def open(name, maxver=10, extra=()):
         return _cache[name]
     except KeyError:
         pass
+
     def libs():
         if sys.platform == "linux":
             yield '%s.so' % name
@@ -23,6 +25,7 @@ def open(name, maxver=10, extra=()):
                 yield '%s.%s' % (name, ext)
         for n in extra:
             yield n
+
     err = None
     for n in libs():
         try:
@@ -33,8 +36,10 @@ def open(name, maxver=10, extra=()):
             err = e
     raise err
 
+
 def libc():
     return open("libc", 6)
+
 
 # Find out bitness of the platform, even if long ints are not supported
 # TODO: All bitness differences should be removed from micropython-lib, and

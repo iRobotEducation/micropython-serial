@@ -2,7 +2,6 @@ import ffi
 import os
 import ffilib
 
-
 libc = ffilib.libc()
 
 fcntl_l = libc.func("i", "fcntl", "iil")
